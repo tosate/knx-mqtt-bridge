@@ -12,7 +12,6 @@ import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.KNXNetworkLinkIP;
 import tuwien.auto.calimero.link.medium.TPSettings;
 import tuwien.auto.calimero.process.ProcessCommunicator;
-import tuwien.auto.calimero.process.ProcessCommunicatorImpl;
 
 @Component
 public class KnxManager {
@@ -27,7 +26,7 @@ public class KnxManager {
 	public boolean connect() {
 		try {
 			knxLink = new KNXNetworkLinkIP(config.getKnxRemoteHost(), TPSettings.TP1);
-			pc = new ProcessCommunicatorImpl(knxLink);
+			
 			if(LOGGER.isDebugEnabled()) {
 				LOGGER.debug("Connected to KNX: {}", knxLink.getName());
 			}

@@ -49,7 +49,7 @@
 		<!-- https://mvnrepository.com/artifact/com.github.calimero/calimero-core -->
 		<dependency>
 			<groupId>com.github.calimero</groupId>
-			<artifactId>calimero-core</artifactId>
+			<artifactId>calimero-device</artifactId>
 			<version>${calimero-core.version}</version>
 		</dependency>
 
