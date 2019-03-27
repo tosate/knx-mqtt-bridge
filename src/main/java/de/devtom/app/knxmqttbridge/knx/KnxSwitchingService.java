@@ -12,6 +12,7 @@ import tuwien.auto.calimero.datapoint.Datapoint;
 import tuwien.auto.calimero.datapoint.StateDP;
 import tuwien.auto.calimero.device.KnxDeviceServiceLogic;
 import tuwien.auto.calimero.dptxlator.DPTXlator;
+import tuwien.auto.calimero.dptxlator.DPTXlator1BitControlled;
 import tuwien.auto.calimero.dptxlator.DPTXlatorBoolean;
 import tuwien.auto.calimero.exception.KNXException;
 
@@ -28,8 +29,10 @@ public class KnxSwitchingService extends KnxDeviceServiceLogic {
 		this.stateDatapoints = new ArrayList<StateDP>();
 		
 		CommandDP cmdDp = new CommandDP(switchingGa, "Switching");
+		cmdDp.setDPT(0, DPTXlatorBoolean.DPT_SWITCH.getID());
 		this.addCommandDp(cmdDp);
 		StateDP stateDp = new StateDP(listeningGa, "State");
+		stateDp.setDPT(0, DPTXlatorBoolean.DPT_STATE.getID());
 		this.addStateDp(stateDp);
 	}
 	

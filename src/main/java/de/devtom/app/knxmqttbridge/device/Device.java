@@ -2,6 +2,8 @@ package de.devtom.app.knxmqttbridge.device;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Device {
@@ -9,6 +11,8 @@ public class Device {
 	private String name;
 	@JsonProperty("mqtt-topic")
 	private String mqttTopic;
+	@JsonProperty("knx-individual-address")
+	private String knxIndividualAddress;
 	@JsonProperty("knx-ga-switching")
 	private List<String> knxSwitchingGroupAddresses;
 	@JsonProperty("knx-ga-listening")
@@ -25,5 +29,8 @@ public class Device {
 	}
 	public List<String> getKnxListeningGroupAddresses() {
 		return knxListeningGroupAddresses;
+	}
+	public String getKnxIndividualAddress() {
+		return knxIndividualAddress;
 	}
 }

@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.devtom.app.knxmqttbridge.device.BridgeConfiguration;
 import de.devtom.app.knxmqttbridge.device.Device;
 import de.devtom.app.knxmqttbridge.device.DeviceManager;
+import de.devtom.app.knxmqttbridge.knx.KnxManager;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttDevice;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttMessageHandler;
 

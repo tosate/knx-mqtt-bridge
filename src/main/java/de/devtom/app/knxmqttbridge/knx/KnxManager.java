@@ -1,17 +1,26 @@
 package de.devtom.app.knxmqttbridge.knx;
 
+import java.net.InetSocketAddress;
+
+import javax.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import de.devtom.app.knxmqttbridge.device.BridgeConfiguration;
+import de.devtom.app.knxmqttbridge.device.Device;
 import tuwien.auto.calimero.GroupAddress;
+import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.exception.KNXException;
+import tuwien.auto.calimero.exception.KNXFormatException;
+import tuwien.auto.calimero.knxnetip.KNXnetIPConnection;
+import tuwien.auto.calimero.link.KNXLinkClosedException;
 import tuwien.auto.calimero.link.KNXNetworkLink;
 import tuwien.auto.calimero.link.KNXNetworkLinkIP;
 import tuwien.auto.calimero.link.medium.TPSettings;
-import tuwien.auto.calimero.process.ProcessCommunicator;
 
 @Component
 public class KnxManager {
@@ -21,15 +30,21 @@ public class KnxManager {
 	private BridgeConfiguration config;
 
 	private KNXNetworkLink knxLink = null;
-	private ProcessCommunicator pc = null;
 
+	@PostConstruct
 	public boolean connect() {
+		InetSocketAddress local = new InetSocketAddress("192.168.178.22", 0);
+		InetSocketAddress server = new InetSocketAddress(config.getKnxRemoteHost(), KNXnetIPConnection.DEFAULT_PORT);;
+		
 		try {
-			knxLink = new KNXNetworkLinkIP(config.getKnxRemoteHost(), TPSettings.TP1);
+			knxLink = new KNXNetworkLinkIP(KNXNetworkLinkIP.TUNNELING, local, server, false, TPSettings.TP1);
 			
 			if(LOGGER.isDebugEnabled()) {
 				LOGGER.debug("Connected to KNX: {}", knxLink.getName());
 			}
+			
+			this.initDevices();
+			
 			return true;
 		} catch (KNXException e) {
 			LOGGER.error("KNX exception: ", e);
@@ -42,20 +57,29 @@ public class KnxManager {
 		return false;
 	}
 	
-	public void writeToKnx(GroupAddress dp, String value) {
-		try {
-			pc.write(dp, value);
-		} catch (KNXException e) {
-			LOGGER.error("KNX exception: ", e);
-			disconnect();
+	private void initDevices() {
+		for(Device device : config.getDevices()) {
+			try {
+				GroupAddress switchingGa = new GroupAddress(device.getKnxSwitchingGroupAddresses().get(0));
+				GroupAddress listeningGa = new GroupAddress(device.getKnxListeningGroupAddresses().get(0));
+				KnxSwitchingService knxSwitchingService = new KnxSwitchingService(switchingGa , listeningGa);
+				
+				IndividualAddress individualAddress = new IndividualAddress(device.getKnxIndividualAddress());
+				KnxSwitchingDevice knxSwitchingDevice = new KnxSwitchingDevice(device.getName(), individualAddress , knxSwitchingService);
+				knxSwitchingDevice.connect(this.knxLink);
+			} catch(KNXFormatException e) {
+				LOGGER.error("Could not add KNX group address", e);
+			} catch (KNXLinkClosedException e) {
+				LOGGER.error("KNX link closed exception: ", e);
+			} catch (KNXPropertyException e) {
+				LOGGER.error("KNX property exception: ", e);
+			} catch (InterruptedException e) {
+				LOGGER.error("Interrupted exception: ", e);
+			}
 		}
 	}
 	
 	public void disconnect() {
-		if (pc != null) {
-			pc.detach();
-		}
-
 		if (knxLink != null) {
 			knxLink.close();
 		}
