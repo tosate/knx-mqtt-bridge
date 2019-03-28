@@ -16,9 +16,9 @@ public class BridgeConfiguration {
 	@JsonProperty("knx-remote-host")
 	private String knxRemoteHost;
 	@JsonProperty("devices")
-	private List<Device> devices;
+	private List<DeviceConfiguration> devices;
 
-	public List<Device> getDevices() {
+	public List<DeviceConfiguration> getDevices() {
 		return devices;
 	}
 	

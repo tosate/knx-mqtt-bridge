@@ -2,11 +2,9 @@ package de.devtom.app.knxmqttbridge.device;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Device {
+public class DeviceConfiguration {
 	@JsonProperty("device-name")
 	private String name;
 	@JsonProperty("mqtt-topic")

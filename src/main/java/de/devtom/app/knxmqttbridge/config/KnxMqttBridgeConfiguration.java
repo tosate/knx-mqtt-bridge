@@ -26,9 +26,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.devtom.app.knxmqttbridge.device.BridgeConfiguration;
-import de.devtom.app.knxmqttbridge.device.Device;
+import de.devtom.app.knxmqttbridge.device.DeviceConfiguration;
 import de.devtom.app.knxmqttbridge.device.DeviceManager;
-import de.devtom.app.knxmqttbridge.knx.KnxManager;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttDevice;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttMessageHandler;
 
@@ -49,6 +48,8 @@ public class KnxMqttBridgeConfiguration {
 	private BridgeConfiguration config;
 	@Autowired
 	private TasmotaMqttMessageHandler tasmotaMqttMessageHandler;
+	@Autowired
+	private DeviceManager deviceManager;
 	
 	@Bean
 	public BridgeConfiguration BridgeConfiguration() throws JsonParseException, JsonMappingException, IOException {
@@ -94,11 +95,6 @@ public class KnxMqttBridgeConfiguration {
 				.handle(tasmotaMqttMessageHandler)
 				.get();
 	}
-	
-	@Bean
-	public DeviceManager deviceManager() {
-		return new DeviceManager();
-	}
 
 	@Bean
 	public MessageProducerSupport mqttInbound() {
@@ -107,10 +103,10 @@ public class KnxMqttBridgeConfiguration {
 		adapter.setConverter(new DefaultPahoMessageConverter());
 		adapter.setQos(1);
 		
-		for(Device device : config.getDevices()) {
+		for(DeviceConfiguration device : config.getDevices()) {
 			TasmotaMqttDevice mqttDevice = new TasmotaMqttDevice(device.getMqttTopic());
 			adapter.addTopic(mqttDevice.getMqttCommandTopics(), mqttDevice.getMqttTelemetryTopics(), mqttDevice.getMqttStatusTopics());
-			this.deviceManager().addMqttDevice(mqttDevice);
+			this.deviceManager.addMqttDevice(mqttDevice);
 		}
 		return adapter;
 	}

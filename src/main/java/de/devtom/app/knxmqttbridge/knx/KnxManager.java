@@ -10,9 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import de.devtom.app.knxmqttbridge.device.BridgeConfiguration;
-import de.devtom.app.knxmqttbridge.device.Device;
+import de.devtom.app.knxmqttbridge.device.DeviceConfiguration;
+import de.devtom.app.knxmqttbridge.device.DeviceManager;
 import tuwien.auto.calimero.GroupAddress;
 import tuwien.auto.calimero.IndividualAddress;
+import tuwien.auto.calimero.device.BaseKnxDevice;
 import tuwien.auto.calimero.device.ios.KNXPropertyException;
 import tuwien.auto.calimero.exception.KNXException;
 import tuwien.auto.calimero.exception.KNXFormatException;
@@ -28,6 +30,8 @@ public class KnxManager {
 
 	@Autowired
 	private BridgeConfiguration config;
+	@Autowired
+	private DeviceManager deviceManager;
 
 	private KNXNetworkLink knxLink = null;
 
@@ -58,7 +62,7 @@ public class KnxManager {
 	}
 	
 	private void initDevices() {
-		for(Device device : config.getDevices()) {
+		for(DeviceConfiguration device : config.getDevices()) {
 			try {
 				GroupAddress switchingGa = new GroupAddress(device.getKnxSwitchingGroupAddresses().get(0));
 				GroupAddress listeningGa = new GroupAddress(device.getKnxListeningGroupAddresses().get(0));
@@ -66,7 +70,8 @@ public class KnxManager {
 				
 				IndividualAddress individualAddress = new IndividualAddress(device.getKnxIndividualAddress());
 				KnxSwitchingDevice knxSwitchingDevice = new KnxSwitchingDevice(device.getName(), individualAddress , knxSwitchingService);
-				knxSwitchingDevice.connect(this.knxLink);
+				BaseKnxDevice knxDevice = knxSwitchingDevice.connect(this.knxLink);
+				this.deviceManager.addKnxDevice(knxDevice);
 			} catch(KNXFormatException e) {
 				LOGGER.error("Could not add KNX group address", e);
 			} catch (KNXLinkClosedException e) {
