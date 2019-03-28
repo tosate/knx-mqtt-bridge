@@ -103,7 +103,7 @@ public class KnxMqttBridgeConfiguration {
 		adapter.setConverter(new DefaultPahoMessageConverter());
 		adapter.setQos(1);
 		
-		for(DeviceConfiguration device : config.getDevices()) {
+		for(DeviceConfiguration device : config.getDeviceConfigurations()) {
 			TasmotaMqttDevice mqttDevice = new TasmotaMqttDevice(device.getMqttTopic());
 			adapter.addTopic(mqttDevice.getMqttCommandTopics(), mqttDevice.getMqttTelemetryTopics(), mqttDevice.getMqttStatusTopics());
 			this.deviceManager.addMqttDevice(mqttDevice);

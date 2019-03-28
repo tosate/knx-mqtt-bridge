@@ -16,10 +16,10 @@ public class BridgeConfiguration {
 	@JsonProperty("knx-remote-host")
 	private String knxRemoteHost;
 	@JsonProperty("devices")
-	private List<DeviceConfiguration> devices;
+	private List<DeviceConfiguration> deviceConfigurations;
 
-	public List<DeviceConfiguration> getDevices() {
-		return devices;
+	public List<DeviceConfiguration> getDeviceConfigurations() {
+		return deviceConfigurations;
 	}
 	
 	public String getMqttServerUri() {

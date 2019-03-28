@@ -62,15 +62,14 @@ public class KnxManager {
 	}
 	
 	private void initDevices() {
-		for(DeviceConfiguration device : config.getDevices()) {
+		for(DeviceConfiguration device : config.getDeviceConfigurations()) {
 			try {
 				GroupAddress switchingGa = new GroupAddress(device.getKnxSwitchingGroupAddresses().get(0));
 				GroupAddress listeningGa = new GroupAddress(device.getKnxListeningGroupAddresses().get(0));
 				KnxSwitchingService knxSwitchingService = new KnxSwitchingService(switchingGa , listeningGa);
 				
 				IndividualAddress individualAddress = new IndividualAddress(device.getKnxIndividualAddress());
-				KnxSwitchingDevice knxSwitchingDevice = new KnxSwitchingDevice(device.getName(), individualAddress , knxSwitchingService);
-				BaseKnxDevice knxDevice = knxSwitchingDevice.connect(this.knxLink);
+				final BaseKnxDevice knxDevice = new BaseKnxDevice(device.getName(), individualAddress, knxLink, knxSwitchingService);
 				this.deviceManager.addKnxDevice(knxDevice);
 			} catch(KNXFormatException e) {
 				LOGGER.error("Could not add KNX group address", e);
@@ -78,8 +77,6 @@ public class KnxManager {
 				LOGGER.error("KNX link closed exception: ", e);
 			} catch (KNXPropertyException e) {
 				LOGGER.error("KNX property exception: ", e);
-			} catch (InterruptedException e) {
-				LOGGER.error("Interrupted exception: ", e);
 			}
 		}
 	}
