@@ -113,6 +113,6 @@ public class TasmotaMqttDeviceTest {
 		mqttData.setMqttPayload("{\"POWER\":\"OFF\"}");
 		
 		this.device.processStatusData(mqttData);
-		Assert.assertEquals("OFF", device.getPower());
+		Assert.assertEquals("OFF", device.isSwitchedOn());
 	}
 }

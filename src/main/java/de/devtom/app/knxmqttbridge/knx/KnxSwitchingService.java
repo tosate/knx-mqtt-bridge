@@ -20,19 +20,26 @@ public class KnxSwitchingService extends KnxDeviceServiceLogic {
 	
 	private List<CommandDP> commandDatpoints;
 	private List<StateDP> stateDatapoints;
+	private KnxDeviceManager knxDeviceManager;
 	
 	private boolean switchedOn;
 	
-	public KnxSwitchingService(GroupAddress switchingGa, GroupAddress listeningGa) {
+	public KnxSwitchingService(List<GroupAddress> switchingGaList, List<GroupAddress> listeningGaList, KnxDeviceManager knxManager) {
 		this.commandDatpoints = new ArrayList<CommandDP>();
 		this.stateDatapoints = new ArrayList<StateDP>();
+		this.knxDeviceManager = knxManager;
 		
-		CommandDP cmdDp = new CommandDP(switchingGa, "Switching");
-		cmdDp.setDPT(0, DPTXlatorBoolean.DPT_SWITCH.getID());
-		this.addCommandDp(cmdDp);
-		StateDP stateDp = new StateDP(listeningGa, "State");
-		stateDp.setDPT(0, DPTXlatorBoolean.DPT_STATE.getID());
-		this.addStateDp(stateDp);
+		for(GroupAddress ga : switchingGaList) {
+			CommandDP cmdDp = new CommandDP(ga, "Switching");
+			cmdDp.setDPT(0, DPTXlatorBoolean.DPT_SWITCH.getID());
+			this.addCommandDp(cmdDp);
+		}
+		
+		for(GroupAddress ga : listeningGaList) {
+			StateDP stateDp = new StateDP(ga, "State");
+			stateDp.setDPT(0, DPTXlatorBoolean.DPT_STATE.getID());
+			this.addStateDp(stateDp);
+		}
 	}
 	
 	public void addStateDp(StateDP stateDp) {
@@ -66,7 +73,8 @@ public class KnxSwitchingService extends KnxDeviceServiceLogic {
 		if(ofDp instanceof StateDP) {
 			switchedOn = ((DPTXlatorBoolean) update).getValueBoolean();
 		} else if(ofDp instanceof CommandDP) {
-			// TODO send command to MQTT
+			boolean switchCommand = ((DPTXlatorBoolean) update).getValueBoolean();
+			knxDeviceManager.switchService(ofDp.getMainAddress().toString(), switchCommand);
 		}
 		
 		if(LOGGER.isDebugEnabled()) {

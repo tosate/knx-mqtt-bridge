@@ -8,7 +8,8 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.stereotype.Component;
 
-import de.devtom.app.knxmqttbridge.device.DeviceManager;
+import de.devtom.app.knxmqttbridge.config.KnxMqttBridgeConfiguration.MqttGateway;
+import de.devtom.app.knxmqttbridge.device.ServiceRegistry;
 
 @Component
 public class TasmotaMqttMessageHandler extends AbstractMessageHandler {
@@ -17,7 +18,9 @@ public class TasmotaMqttMessageHandler extends AbstractMessageHandler {
 	private static final String MQTT_RECEIVED_TOPIC_KEY = "mqtt_receivedTopic";
 	
 	@Autowired
-	private DeviceManager deviceManager;
+	private ServiceRegistry serviceRegistry;
+	@Autowired
+	private MqttGateway mqttGateway;
 	
 	@Override
 	protected void handleMessageInternal(Message<?> message) throws Exception {
@@ -30,7 +33,7 @@ public class TasmotaMqttMessageHandler extends AbstractMessageHandler {
 		this.processHeaders(message.getHeaders(), tasmotaMqttData);
 		this.processPayload(message.getPayload(), tasmotaMqttData);
 		
-		deviceManager.processMqttData(tasmotaMqttData);
+		this.serviceRegistry.getMqttDeviceManager().processMqttData(tasmotaMqttData);
 	}
 	
 	private void processPayload(Object payload, TasmotaMqttData tasmotaMqttData) {
@@ -64,4 +67,8 @@ public class TasmotaMqttMessageHandler extends AbstractMessageHandler {
 		}
 	}
 
+	public void sendMqttMessage(String topic, boolean switchOn) {
+		String message = switchOn ? "ON" : "OFF";
+		this.mqttGateway.send(topic, message);
+	}
 }

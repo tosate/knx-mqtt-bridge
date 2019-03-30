@@ -9,6 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.integration.annotation.MessagingGateway;
+import org.springframework.integration.annotation.ServiceActivator;
+import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.Pollers;
@@ -18,8 +21,11 @@ import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
 import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
 import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
+import org.springframework.integration.mqtt.support.MqttHeaders;
 import org.springframework.integration.stream.CharacterStreamReadingMessageSource;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.handler.annotation.Header;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -27,7 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.devtom.app.knxmqttbridge.device.BridgeConfiguration;
 import de.devtom.app.knxmqttbridge.device.DeviceConfiguration;
-import de.devtom.app.knxmqttbridge.device.DeviceManager;
+import de.devtom.app.knxmqttbridge.device.ServiceRegistry;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttDevice;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttMessageHandler;
 
@@ -49,7 +55,7 @@ public class KnxMqttBridgeConfiguration {
 	@Autowired
 	private TasmotaMqttMessageHandler tasmotaMqttMessageHandler;
 	@Autowired
-	private DeviceManager deviceManager;
+	private ServiceRegistry serviceRegistry;
 	
 	@Bean
 	public BridgeConfiguration BridgeConfiguration() throws JsonParseException, JsonMappingException, IOException {
@@ -81,6 +87,7 @@ public class KnxMqttBridgeConfiguration {
 	}
 	
 	@Bean
+	@ServiceActivator(inputChannel = "mqttOutboundChannel")
 	public MessageHandler mqttOutbound() {
 		MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(mqttPublisherClientId, mqttClientFactory());
 		messageHandler.setAsync(true);
@@ -106,8 +113,18 @@ public class KnxMqttBridgeConfiguration {
 		for(DeviceConfiguration device : config.getDeviceConfigurations()) {
 			TasmotaMqttDevice mqttDevice = new TasmotaMqttDevice(device.getMqttTopic());
 			adapter.addTopic(mqttDevice.getMqttCommandTopics(), mqttDevice.getMqttTelemetryTopics(), mqttDevice.getMqttStatusTopics());
-			this.deviceManager.addMqttDevice(mqttDevice);
+			this.serviceRegistry.getMqttDeviceManager().addMqttDevice(mqttDevice);
 		}
 		return adapter;
+	}
+	
+	@Bean
+	public MessageChannel mqttOutboundChannel() {
+		return new DirectChannel();
+	}
+	
+	@MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")
+	public interface MqttGateway {
+		void send(@Header(MqttHeaders.TOPIC) String topic, String out);
 	}
 }

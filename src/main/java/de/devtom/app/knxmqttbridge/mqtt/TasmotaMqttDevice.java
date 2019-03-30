@@ -19,12 +19,11 @@ public class TasmotaMqttDevice {
 	private String clientId;
 	private TasmotaStateData stateData;
 	private TasmotaSensorData sensorData;
-	private String power;
+	private TasmotaMqttResultData resultData;
 	private String state;
 
 	public TasmotaMqttDevice(String topic) {
 		this.topic = topic;
-		this.power = "OFF";
 		this.state = "Offline";
 	}
 
@@ -102,8 +101,8 @@ public class TasmotaMqttDevice {
 		return sensorData;
 	}
 
-	public String getPower() {
-		return power;
+	public boolean isSwitchedOn() {
+		return this.resultData.isPowerOn();
 	}
 
 	public String getState() {
@@ -140,15 +139,25 @@ public class TasmotaMqttDevice {
 		ObjectMapper objectMapper = new ObjectMapper();
 		this.sensorData = objectMapper.readValue(tasmotaMqttData.getMqttPayload(), TasmotaSensorData.class);
 	}
+	
+	private void processResultData(TasmotaMqttData tasmotaMqttData) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper objectMapper = new ObjectMapper();
+		this.resultData = objectMapper.readValue(tasmotaMqttData.getMqttPayload(), TasmotaMqttResultData.class);
+	}
 
 	public void processStatusData(TasmotaMqttData tasmotaMqttData) {
-		switch(tasmotaMqttData.getMqttTopicSuffix()) {
-		case "RESULT":
-			String[] resultElements = tasmotaMqttData.getMqttPayload().substring(1, tasmotaMqttData.getMqttPayload().length()-1).split(":");
-			this.power = resultElements[1].trim().replaceAll("\"", "");
-			break;
-		default:
-			LOGGER.error("Unknown status topic suffix: " + tasmotaMqttData.getMqttTopicSuffix());
+		try {
+			switch(tasmotaMqttData.getMqttTopicSuffix()) {
+			case "RESULT":
+				this.processResultData(tasmotaMqttData);
+				break;
+			case "POWER":
+				break;
+			default:
+				LOGGER.error("Unknown status topic suffix: " + tasmotaMqttData.getMqttTopicSuffix());
+			}
+		} catch (Exception e) {
+			LOGGER.error("Error processing Tasmota MQTT data", e);
 		}
 	}
 }
