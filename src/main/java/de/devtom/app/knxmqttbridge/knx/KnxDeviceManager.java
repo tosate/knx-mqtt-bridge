@@ -1,7 +1,12 @@
 package de.devtom.app.knxmqttbridge.knx;
  
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +48,14 @@ public class KnxDeviceManager implements DeviceManager {
 		this.knxRemoteHost = knxRemoteHost;
 	}
 	public boolean connect() {
-		// TODO remove hard coded IP
-		InetSocketAddress local = new InetSocketAddress("192.168.178.22", 0);
 		InetSocketAddress server = new InetSocketAddress(knxRemoteHost, KNXnetIPConnection.DEFAULT_PORT);;
 		
 		try {
+			InetAddress inetAddress = getCurrentIp();
+			if(LOGGER.isDebugEnabled()) {
+				LOGGER.debug("Local IP is {}", inetAddress);
+			}
+			InetSocketAddress local = new InetSocketAddress(inetAddress, 0);
 			knxLink = new KNXNetworkLinkIP(KNXNetworkLinkIP.TUNNELING, local, server, false, TPSettings.TP1);
 			processCommunicator = new ProcessCommunicatorImpl(knxLink);
 			
@@ -136,4 +144,27 @@ public class KnxDeviceManager implements DeviceManager {
 			knxLink.close();
 		}
 	}
+	
+	private InetAddress getCurrentIp() {
+        try {
+            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface
+                    .getNetworkInterfaces();
+            while (networkInterfaces.hasMoreElements()) {
+                NetworkInterface ni = (NetworkInterface) networkInterfaces
+                        .nextElement();
+                Enumeration<InetAddress> nias = ni.getInetAddresses();
+                while(nias.hasMoreElements()) {
+                    InetAddress ia= (InetAddress) nias.nextElement();
+                    if (!ia.isLinkLocalAddress() 
+                     && !ia.isLoopbackAddress()
+                     && ia instanceof Inet4Address) {
+                        return ia;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            LOGGER.error("unable to get current IP " + e.getMessage(), e);
+        }
+        return null;
+    }
 }

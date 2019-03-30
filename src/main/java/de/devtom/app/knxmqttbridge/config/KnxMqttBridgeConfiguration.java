@@ -1,14 +1,16 @@
 package de.devtom.app.knxmqttbridge.config;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
@@ -39,40 +41,50 @@ import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttMessageHandler;
 
 @Configuration
 public class KnxMqttBridgeConfiguration {
+	private static final Logger LOGGER = LoggerFactory.getLogger(KnxMqttBridgeConfiguration.class);
+	
 	@Value("${mqtt.defaultTopic}")
 	private String mqttDefaultTopic;
 	@Value("${mqtt.publisher.clientId}")
 	private String mqttPublisherClientId;
 	@Value("${mqtt.consumer.clientId}")
 	private String mqttConsumerClientId;
-	@Value("${config.resource}")
-	private String configResource;
+	@Value("${config.file}")
+	private String configfile;
 	
-	@Autowired
-	private ResourceLoader resourceLoader;
-	@Autowired
-	private BridgeConfiguration config;
 	@Autowired
 	private TasmotaMqttMessageHandler tasmotaMqttMessageHandler;
 	@Autowired
 	private ServiceRegistry serviceRegistry;
 	
 	@Bean
-	public BridgeConfiguration BridgeConfiguration() throws JsonParseException, JsonMappingException, IOException {
-		Resource resource = resourceLoader.getResource(configResource);
-		ObjectMapper objectMapper = new ObjectMapper();
-		BridgeConfiguration config = objectMapper.readValue(resource.getFile(), BridgeConfiguration.class);
+	public BridgeConfiguration getBridgeConfiguration() {
+		try {
+			FileInputStream fis = new FileInputStream(this.configfile);
+			ObjectMapper objectMapper = new ObjectMapper();
+			BridgeConfiguration config = objectMapper.readValue(fis, BridgeConfiguration.class);
+			
+			return config;
+		} catch(JsonParseException e) {
+			
+		} catch (FileNotFoundException e) {
+			LOGGER.error("File not found exception :", e);
+		} catch (JsonMappingException e) {
+			LOGGER.error("JSON mapping exception :", e);
+		} catch (IOException e) {
+			LOGGER.error("IO exception :", e);
+		}
 		
-		return config;
+		return null;
 	}
 	
 	@Bean
 	public MqttPahoClientFactory mqttClientFactory() {
 		DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
 		MqttConnectOptions options = new MqttConnectOptions();
-		options.setServerURIs(new String[] { config.getMqttServerUri() });
-		options.setUserName(config.getMqttUser());
-		options.setPassword(config.getMqttPassword().toCharArray());
+		options.setServerURIs(new String[] { getBridgeConfiguration().getMqttServerUri() });
+		options.setUserName(getBridgeConfiguration().getMqttUser());
+		options.setPassword(getBridgeConfiguration().getMqttPassword().toCharArray());
 		factory.setConnectionOptions(options);
 		return factory;
 	}
@@ -110,7 +122,7 @@ public class KnxMqttBridgeConfiguration {
 		adapter.setConverter(new DefaultPahoMessageConverter());
 		adapter.setQos(1);
 		
-		for(DeviceConfiguration device : config.getDeviceConfigurations()) {
+		for(DeviceConfiguration device : getBridgeConfiguration().getDeviceConfigurations()) {
 			TasmotaMqttDevice mqttDevice = new TasmotaMqttDevice(device.getMqttTopic());
 			adapter.addTopic(mqttDevice.getMqttCommandTopics(), mqttDevice.getMqttTelemetryTopics(), mqttDevice.getMqttStatusTopics());
 			this.serviceRegistry.getMqttDeviceManager().addMqttDevice(mqttDevice);
