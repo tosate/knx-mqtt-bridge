@@ -8,9 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import de.devtom.app.knxmqttbridge.device.DeviceManager;
 import de.devtom.app.knxmqttbridge.device.ServiceRegistry;
-import tuwien.auto.calimero.exception.KNXFormatException;
-import tuwien.auto.calimero.exception.KNXTimeoutException;
-import tuwien.auto.calimero.link.KNXLinkClosedException;
 
 public class MqttDeviceManager implements DeviceManager{
 	private static final Logger LOGGER = LoggerFactory.getLogger(MqttDeviceManager.class);
@@ -35,7 +32,7 @@ public class MqttDeviceManager implements DeviceManager{
 		}
 	}
 
-	public void processMqttData(TasmotaMqttData tasmotaMqttData) throws KNXTimeoutException, KNXLinkClosedException, KNXFormatException {
+	public void processMqttData(TasmotaMqttData tasmotaMqttData) {
 		if(mqttDevices.containsKey(tasmotaMqttData.getMqttTopic())) {
 			TasmotaMqttDevice mqttDevice = mqttDevices.get(tasmotaMqttData.getMqttTopic());
 			

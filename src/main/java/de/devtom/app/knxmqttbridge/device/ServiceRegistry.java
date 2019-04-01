@@ -9,6 +9,9 @@ import javax.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ExitCodeGenerator;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import de.devtom.app.knxmqttbridge.knx.KnxDeviceManager;
@@ -24,6 +27,8 @@ public class ServiceRegistry {
 	private BridgeConfiguration config;
 	@Autowired
 	private TasmotaMqttMessageHandler mqttMessageHandler;
+	@Autowired
+	private ApplicationContext appContext;
 	
 	private MqttDeviceManager mqttDeviceManager;
 	private KnxDeviceManager knxDeviceManager;
@@ -71,5 +76,17 @@ public class ServiceRegistry {
 			
 			topicToListeningGa.put(deviceConfig.getMqttTopic(), deviceConfig.getKnxListeningGroupAddresses());
 		}
+	}
+	
+	public void terminateApplication() {
+		int exitCode = SpringApplication.exit(appContext, new ExitCodeGenerator() {
+			
+			@Override
+			public int getExitCode() {
+				return -1;
+			}
+		});
+		
+		System.exit(exitCode);
 	}
 }
