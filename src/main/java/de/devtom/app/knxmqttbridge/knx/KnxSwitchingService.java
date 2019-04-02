@@ -15,7 +15,7 @@ import tuwien.auto.calimero.dptxlator.DPTXlator;
 import tuwien.auto.calimero.dptxlator.DPTXlatorBoolean;
 import tuwien.auto.calimero.exception.KNXException;
 
-public class KnxSwitchingService extends KnxDeviceServiceLogic {
+public class KnxSwitchingService extends KnxDeviceServiceLogic implements Runnable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(KnxSwitchingService.class);
 	
 	private List<CommandDP> commandDatpoints;
@@ -91,6 +91,20 @@ public class KnxSwitchingService extends KnxDeviceServiceLogic {
 			LOGGER.debug("Respond with \"{}\" to read request for {}", t.getValue(), ofDp.getName());
 		}
 		return t;
+	}
+
+	@Override
+	public void run() {
+		// wait forever, until interrupted
+		try {
+			synchronized (this) {
+				while(true) {
+					wait();
+				}
+			}
+		} catch(final InterruptedException e) {
+			
+		}
 	}
 
 }
