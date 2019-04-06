@@ -8,6 +8,7 @@ import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttData;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttDevice;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaSensorData;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaStateData;
+import de.devtom.app.knxmqttbridge.mqtt.TasmotaUptimeData;
 
 public class TasmotaMqttDeviceTest {
 	private static final String MQTT_DELIMITER = "/";
@@ -20,6 +21,7 @@ public class TasmotaMqttDeviceTest {
 	private static final String STATE_SUFFIX = "STATE";
 	private static final String SENSOR_SUFFIX = "SENSOR";
 	private static final String RESULT_SUFFIX = "RESULT";
+	private static final String UPTIME_SUFFIX = "UPTIME";
 	
 	private TasmotaMqttDevice device;
 	
@@ -78,6 +80,20 @@ public class TasmotaMqttDeviceTest {
 		Assert.assertEquals(78, stateData.getWifi().getRssi());
 		Assert.assertEquals(1, stateData.getWifi().getLinkCount());
 		Assert.assertEquals("0T00:00:04", stateData.getWifi().getDowntime());
+	}
+	
+	@Test
+	public void testProcessTelemetryDataUptime() {
+		TasmotaMqttData mqttData = new TasmotaMqttData();
+		mqttData.setMqttPrefix(TEL_PREFIX);
+		mqttData.setMqttTopic(TOPIC);
+		mqttData.setMqttTopicSuffix(UPTIME_SUFFIX);
+		mqttData.setMqttPayload("{\"Time\":\"2019-04-06T15:02:00\",\"Uptime\":\"17T02:04:50\"}");
+		
+		this.device.processTelemetryData(mqttData);
+		TasmotaUptimeData uptimeData = device.getUptimeData();
+		Assert.assertEquals("2019-04-06T15:02:00", uptimeData.getTime());
+		Assert.assertEquals("17T02:04:50", uptimeData.getUptime());
 	}
 	
 	@Test

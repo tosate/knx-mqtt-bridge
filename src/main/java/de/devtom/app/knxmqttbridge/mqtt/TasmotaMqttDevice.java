@@ -20,6 +20,7 @@ public class TasmotaMqttDevice {
 	private TasmotaStateData stateData;
 	private TasmotaSensorData sensorData;
 	private TasmotaMqttResultData resultData;
+	private TasmotaUptimeData uptimeData;
 	private String state;
 
 	public TasmotaMqttDevice(String topic) {
@@ -121,12 +122,19 @@ public class TasmotaMqttDevice {
 			case "LWT":
 				this.state = tasmotaMqttData.getMqttPayload();
 				break;
+			case "UPTIME":
+				this.processUptimeData(tasmotaMqttData);
 			default:
 				LOGGER.error("Unknown telemetry topic suffix: " + tasmotaMqttData.getMqttTopicSuffix());
 			}
 		} catch (Exception e) {
 			LOGGER.error("Error processing Tasmota MQTT data", e);
 		}
+	}
+
+	private void processUptimeData(TasmotaMqttData tasmotaMqttData) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper objectMapper = new ObjectMapper();
+		this.uptimeData = objectMapper.readValue(tasmotaMqttData.getMqttPayload(), TasmotaUptimeData.class);
 	}
 
 	private void processStateData(TasmotaMqttData tasmotaMqttData)
@@ -159,5 +167,9 @@ public class TasmotaMqttDevice {
 		} catch (Exception e) {
 			LOGGER.error("Error processing Tasmota MQTT data", e);
 		}
+	}
+
+	public TasmotaUptimeData getUptimeData() {
+		return this.uptimeData;
 	}
 }
