@@ -41,21 +41,16 @@ public class KnxDeviceManager implements DeviceManager {
 
 	private KNXNetworkLink knxLink = null;
 	private ProcessCommunicator processCommunicator = null;
-	private Map<GroupAddress, KnxSwitchingService> gaToKnxSwitchingService = new HashMap<>();
+	private Map<IndividualAddress, KnxSwitchingService> individualAddressToKnxSwitchingService = new HashMap<>();
 
 	public KnxDeviceManager(ServiceRegistry serviceRegistry, String knxRemoteHost) {
 		this.serviceRegistry = serviceRegistry;
 		this.knxRemoteHost = knxRemoteHost;
 	}
 	public boolean connect() {
-		InetSocketAddress server = new InetSocketAddress(knxRemoteHost, KNXnetIPConnection.DEFAULT_PORT);;
-		
+		InetSocketAddress local = new InetSocketAddress(getCurrentIp(), 0);
+		InetSocketAddress server = new InetSocketAddress(knxRemoteHost, KNXnetIPConnection.DEFAULT_PORT);
 		try {
-			InetAddress inetAddress = getCurrentIp();
-			if(LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Local IP is {}", inetAddress);
-			}
-			InetSocketAddress local = new InetSocketAddress(inetAddress, 0);
 			knxLink = new KNXNetworkLinkIP(KNXNetworkLinkIP.TUNNELING, local, server, false, TPSettings.TP1);
 			processCommunicator = new ProcessCommunicatorImpl(knxLink);
 			
@@ -89,14 +84,29 @@ public class KnxDeviceManager implements DeviceManager {
 					listeningGaList.add(new GroupAddress(ga));
 				}
 				
-				KnxSwitchingService knxSwitchingService = new KnxSwitchingService(switchingGaList , listeningGaList, this);
-				for(GroupAddress listeningGa : listeningGaList) {
-					this.gaToKnxSwitchingService.put(listeningGa, knxSwitchingService);
-				}
-				
 				IndividualAddress individualAddress = new IndividualAddress(device.getKnxIndividualAddress());
-				final BaseKnxDevice knxDevice = new BaseKnxDevice(device.getName(), individualAddress, knxLink, knxSwitchingService);
-				this.knxDevices.add(knxDevice);
+				KnxSwitchingService knxSwitchingService = null;
+				if(device.getKnxSceneGroupAddress() != null && device.getKnxSceneGroupAddress().length() > 0) {
+					GroupAddress sceneGA = new GroupAddress(device.getKnxSceneGroupAddress());
+					knxSwitchingService = new KnxSwitchingService(individualAddress, switchingGaList, listeningGaList, sceneGA, this);
+					if(device.getKnxScenes() != null) {
+						for(KnxSceneConfiguration scene : device.getKnxScenes()) {
+							knxSwitchingService.addScene(scene.getSceneNumber(), scene.isSwitchedOn());
+						}
+					}
+				} else {
+					knxSwitchingService = new KnxSwitchingService(individualAddress, switchingGaList , listeningGaList, this);
+				}
+				this.individualAddressToKnxSwitchingService.put(individualAddress, knxSwitchingService);
+				
+				if(knxLink != null) {
+					final BaseKnxDevice knxDevice = new BaseKnxDevice(device.getName(), individualAddress, knxLink, knxSwitchingService);
+					this.knxDevices.add(knxDevice);
+					Thread t = new Thread(knxSwitchingService);
+					t.start();
+				} else {
+					LOGGER.error("No connection to KNX!");
+				}
 			} catch(KNXFormatException e) {
 				LOGGER.error("Could not add KNX group address", e);
 			} catch (KNXLinkClosedException e) {
@@ -118,21 +128,27 @@ public class KnxDeviceManager implements DeviceManager {
 	public void updateServiceState(String serviceIdentifier, boolean switchedOn) {
 		// send status to KNX
 		try {
-			GroupAddress ga = new GroupAddress(serviceIdentifier);
-			if(!this.gaToKnxSwitchingService.containsKey(ga)) {
-				LOGGER.error("No KNX service for group address {}!", ga.toString());
+			IndividualAddress individualAddress = new IndividualAddress(serviceIdentifier);
+			if(!this.individualAddressToKnxSwitchingService.containsKey(individualAddress)) {
+				LOGGER.error("No KNX service for individual address {}!", individualAddress.toString());
 				return;
 			}
 			// publish KNX message to group Address
-			this.processCommunicator.write(ga, switchedOn);
+			for(GroupAddress ga : this.individualAddressToKnxSwitchingService.get(individualAddress).getListeningGroupAddresses()) {
+				this.processCommunicator.write(ga, switchedOn);
+				if(LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Group address {} has status {} now.", ga.toString(), switchedOn ? "ON" : "OFF");
+				}
+			}
 		} catch (KNXFormatException e) {
 			LOGGER.error("KNX format exception: ", e);
 		} catch (KNXTimeoutException e) {
 			LOGGER.error("KNX timeout exception: ", e);
+			this.serviceRegistry.terminateApplication();
 		} catch (KNXLinkClosedException e) {
 			LOGGER.error("KNX link closed exception: ", e);
-		}
-		
+			this.serviceRegistry.terminateApplication();
+		}		
 	}
 
 	public void disconnect() {
@@ -146,25 +162,21 @@ public class KnxDeviceManager implements DeviceManager {
 	}
 	
 	private InetAddress getCurrentIp() {
-        try {
-            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface
-                    .getNetworkInterfaces();
-            while (networkInterfaces.hasMoreElements()) {
-                NetworkInterface ni = (NetworkInterface) networkInterfaces
-                        .nextElement();
-                Enumeration<InetAddress> nias = ni.getInetAddresses();
-                while(nias.hasMoreElements()) {
-                    InetAddress ia= (InetAddress) nias.nextElement();
-                    if (!ia.isLinkLocalAddress() 
-                     && !ia.isLoopbackAddress()
-                     && ia instanceof Inet4Address) {
-                        return ia;
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            LOGGER.error("unable to get current IP " + e.getMessage(), e);
-        }
-        return null;
-    }
+		try {
+			Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+			while(networkInterfaces.hasMoreElements()) {
+				NetworkInterface ni = (NetworkInterface) networkInterfaces.nextElement();
+				Enumeration<InetAddress> nias = ni.getInetAddresses();
+				while(nias.hasMoreElements()) {
+					InetAddress ia = (InetAddress) nias.nextElement();
+					if(!ia.isLinkLocalAddress() && ! ia.isLoopbackAddress() && ia instanceof Inet4Address) {
+						return ia;
+					}
+				}
+			}
+		} catch(SocketException e) {
+			LOGGER.error("unable to get current IP " + e.getMessage(), e);
+		}
+		return null;
+	}
 }
