@@ -1,0 +1,14 @@
+{
+	"mqtt-server-host" : "localhost",
+	"mqtt-server-port" : 1883,
+	"mqtt-user" : "user",
+	"mqtt-password" : "secret",
+	"knx-remote-host" : "localhost",
+	"devices" : [{
+		"device-name" : "Lamp 1",
+		"mqtt-topic" : "topic1",
+		"knx-individual-address" : "1.1.1",
+		"knx-ga-switching" : [ "1/1/1", "1/1/2" ],
+		"knx-ga-listening" : [ "1/4/1" ]
+	}]
+}

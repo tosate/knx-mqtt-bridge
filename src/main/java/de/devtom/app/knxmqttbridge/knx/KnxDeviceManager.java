@@ -41,7 +41,7 @@ public class KnxDeviceManager implements DeviceManager {
 
 	private KNXNetworkLink knxLink = null;
 	private ProcessCommunicator processCommunicator = null;
-	private Map<GroupAddress, KnxSwitchingService> gaToKnxSwitchingService = new HashMap<>();
+	private Map<IndividualAddress, KnxSwitchingService> individualAddressToKnxSwitchingService = new HashMap<>();
 
 	public KnxDeviceManager(ServiceRegistry serviceRegistry, String knxRemoteHost) {
 		this.serviceRegistry = serviceRegistry;
@@ -84,12 +84,21 @@ public class KnxDeviceManager implements DeviceManager {
 					listeningGaList.add(new GroupAddress(ga));
 				}
 				
-				KnxSwitchingService knxSwitchingService = new KnxSwitchingService(switchingGaList , listeningGaList, this);
-				for(GroupAddress listeningGa : listeningGaList) {
-					this.gaToKnxSwitchingService.put(listeningGa, knxSwitchingService);
-				}
-				
 				IndividualAddress individualAddress = new IndividualAddress(device.getKnxIndividualAddress());
+				KnxSwitchingService knxSwitchingService = null;
+				if(device.getKnxSceneGroupAddress() != null && device.getKnxSceneGroupAddress().length() > 0) {
+					GroupAddress sceneGA = new GroupAddress(device.getKnxSceneGroupAddress());
+					knxSwitchingService = new KnxSwitchingService(individualAddress, switchingGaList, listeningGaList, sceneGA, this);
+					if(device.getKnxScenes() != null) {
+						for(KnxSceneConfiguration scene : device.getKnxScenes()) {
+							knxSwitchingService.addScene(scene.getSceneNumber(), scene.isSwitchedOn());
+						}
+					}
+				} else {
+					knxSwitchingService = new KnxSwitchingService(individualAddress, switchingGaList , listeningGaList, this);
+				}
+				this.individualAddressToKnxSwitchingService.put(individualAddress, knxSwitchingService);
+				
 				if(knxLink != null) {
 					final BaseKnxDevice knxDevice = new BaseKnxDevice(device.getName(), individualAddress, knxLink, knxSwitchingService);
 					this.knxDevices.add(knxDevice);
@@ -119,15 +128,17 @@ public class KnxDeviceManager implements DeviceManager {
 	public void updateServiceState(String serviceIdentifier, boolean switchedOn) {
 		// send status to KNX
 		try {
-			GroupAddress ga = new GroupAddress(serviceIdentifier);
-			if(!this.gaToKnxSwitchingService.containsKey(ga)) {
-				LOGGER.error("No KNX service for group address {}!", ga.toString());
+			IndividualAddress individualAddress = new IndividualAddress(serviceIdentifier);
+			if(!this.individualAddressToKnxSwitchingService.containsKey(individualAddress)) {
+				LOGGER.error("No KNX service for individual address {}!", individualAddress.toString());
 				return;
 			}
 			// publish KNX message to group Address
-			this.processCommunicator.write(ga, switchedOn);
-			if(LOGGER.isDebugEnabled()) {
-				LOGGER.debug("Group address {} has status {} now.", ga.toString(), switchedOn ? "ON" : "OFF");
+			for(GroupAddress ga : this.individualAddressToKnxSwitchingService.get(individualAddress).getListeningGroupAddresses()) {
+				this.processCommunicator.write(ga, switchedOn);
+				if(LOGGER.isDebugEnabled()) {
+					LOGGER.debug("Group address {} has status {} now.", ga.toString(), switchedOn ? "ON" : "OFF");
+				}
 			}
 		} catch (KNXFormatException e) {
 			LOGGER.error("KNX format exception: ", e);

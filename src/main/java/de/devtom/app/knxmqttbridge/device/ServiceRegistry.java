@@ -1,7 +1,6 @@
 package de.devtom.app.knxmqttbridge.device;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Component;
 import de.devtom.app.knxmqttbridge.knx.KnxDeviceManager;
 import de.devtom.app.knxmqttbridge.mqtt.MqttDeviceManager;
 import de.devtom.app.knxmqttbridge.mqtt.TasmotaMqttMessageHandler;
-import tuwien.auto.calimero.GroupAddress;
+import tuwien.auto.calimero.IndividualAddress;
 import tuwien.auto.calimero.exception.KNXFormatException;
 
 @Component
@@ -32,8 +31,8 @@ public class ServiceRegistry {
 	
 	private MqttDeviceManager mqttDeviceManager;
 	private KnxDeviceManager knxDeviceManager;
-	private Map<String, String> groupAddressToTopic = new HashMap<>();
-	private Map<String, List<String>> topicToListeningGa = new HashMap<>();
+	private Map<String, String> individualAddressToTopic = new HashMap<>();
+	private Map<String, String> topicToIndividualAddress = new HashMap<>();
 	
 	public MqttDeviceManager getMqttDeviceManager() {
 		return mqttDeviceManager;
@@ -41,13 +40,13 @@ public class ServiceRegistry {
 
 	public void switchService(String serviceIdentifier, boolean switchOn) {
 		try {
-			GroupAddress ga = new GroupAddress(serviceIdentifier);
-			if(groupAddressToTopic.containsKey(ga.toString())) {
-				String topic = groupAddressToTopic.get(ga.toString());
+			IndividualAddress individualAddress = new IndividualAddress(serviceIdentifier);
+			if(individualAddressToTopic.containsKey(individualAddress.toString())) {
+				String topic = individualAddressToTopic.get(individualAddress.toString());
 				mqttDeviceManager.switchService(topic, switchOn);
 			} else {
 				if(LOGGER.isDebugEnabled()) {
-					LOGGER.debug("No topic found for {}", ga.toString());
+					LOGGER.debug("No topic found for {}", individualAddress.toString());
 				}
 			}
 		} catch (KNXFormatException e) {
@@ -57,10 +56,8 @@ public class ServiceRegistry {
 	
 	public void updateServiceState(String serviceIdentifier, boolean switchedOn) {
 		// send status to KNX
-		List<String> groupdAddresses = this.topicToListeningGa.get(serviceIdentifier);
-		for(String ga : groupdAddresses) {
-			this.knxDeviceManager.updateServiceState(ga, switchedOn);
-		}
+		String individualAddresses = this.topicToIndividualAddress.get(serviceIdentifier);
+		this.knxDeviceManager.updateServiceState(individualAddresses, switchedOn);
 	}
 
 	@PostConstruct
@@ -70,11 +67,9 @@ public class ServiceRegistry {
 		knxDeviceManager.connect();
 		knxDeviceManager.initDevices(config.getDeviceConfigurations());
 		for(DeviceConfiguration deviceConfig : config.getDeviceConfigurations()) {
-			for(String groupAddress : deviceConfig.getKnxSwitchingGroupAddresses()) {
-				groupAddressToTopic.put(groupAddress, deviceConfig.getMqttTopic());
-			}
+			individualAddressToTopic.put(deviceConfig.getKnxIndividualAddress(), deviceConfig.getMqttTopic());
 			
-			topicToListeningGa.put(deviceConfig.getMqttTopic(), deviceConfig.getKnxListeningGroupAddresses());
+			topicToIndividualAddress.put(deviceConfig.getMqttTopic(), deviceConfig.getKnxIndividualAddress());
 		}
 	}
 	
