@@ -124,6 +124,7 @@ public class TasmotaMqttDevice {
 				break;
 			case "UPTIME":
 				this.processUptimeData(tasmotaMqttData);
+				break;
 			default:
 				LOGGER.error("Unknown telemetry topic suffix: " + tasmotaMqttData.getMqttTopicSuffix());
 			}

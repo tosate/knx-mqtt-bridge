@@ -9,6 +9,8 @@ public class TasmotaStateData {
 	private String uptime;
 	@JsonProperty("Vcc")
 	private float vcc;
+	@JsonProperty("Heap")
+	private int heap;
 	@JsonProperty("SleepMode")
 	private String sleepMode;
 	@JsonProperty("Sleep")
@@ -42,5 +44,8 @@ public class TasmotaStateData {
 	}
 	public TasmotaWifiData getWifi() {
 		return wifi;
+	}
+	public int getHeap() {
+		return heap;
 	}
 }
