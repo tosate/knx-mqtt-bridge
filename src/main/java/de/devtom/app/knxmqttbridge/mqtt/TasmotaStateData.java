@@ -3,7 +3,7 @@ package de.devtom.app.knxmqttbridge.mqtt;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonIgnoreProperties
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class TasmotaStateData {
 	@JsonProperty("Time")
 	private String time;
@@ -25,6 +25,8 @@ public class TasmotaStateData {
 	private TasmotaWifiData wifi;
 	@JsonProperty("UptimeSec")
 	private int upTimeSec;
+	@JsonProperty("MqttCount")
+	private int mqttCount;
 	public String getTime() {
 		return time;
 	}
@@ -51,5 +53,11 @@ public class TasmotaStateData {
 	}
 	public int getHeap() {
 		return heap;
+	}
+	public int getUpTimeSec() {
+		return upTimeSec;
+	}
+	public int getMqttCount() {
+		return mqttCount;
 	}
 }
