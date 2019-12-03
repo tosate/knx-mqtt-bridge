@@ -1,7 +1,9 @@
 package de.devtom.app.knxmqttbridge.mqtt;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties
 public class TasmotaSensorData {
 	@JsonProperty("Time")
 	private String time;

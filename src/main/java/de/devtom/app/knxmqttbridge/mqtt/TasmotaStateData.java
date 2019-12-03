@@ -1,7 +1,9 @@
 package de.devtom.app.knxmqttbridge.mqtt;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties
 public class TasmotaStateData {
 	@JsonProperty("Time")
 	private String time;
@@ -21,6 +23,8 @@ public class TasmotaStateData {
 	private String power;
 	@JsonProperty("Wifi")
 	private TasmotaWifiData wifi;
+	@JsonProperty("UptimeSec")
+	private int upTimeSec;
 	public String getTime() {
 		return time;
 	}
